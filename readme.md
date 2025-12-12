@@ -67,15 +67,13 @@ Exportify is a simpler, faster way to get your Spotify playlists without waiting
 
 How to use Exportify:
 
-    1. Go to https://exportify.net/
+    Go to https://exportify.net/
 
-    2. Click "Login with Spotify" and authorize the application
+    Click "Login with Spotify" and authorize the application
 
-    3. Select the playlist you want to export from the list
+    Click "Export" next to your chosen playlist
 
-    4. Click "Export" next to your chosen playlist
-
-    5. Save the CSV file to the data/exportify/ folder in your project
+    Save the CSV file to the data/exportify/ folder in your project
 
 Exportify downloads are immediately available and don't require the waiting period associated with official Spotify data exports.
 
@@ -293,6 +291,13 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 python3 main.py
 ```
 
+or
+
+```bash
+# Just do everything for me...
+./start.sh
+```
+
 You will see a menu with options for downloading, checking files, importing playlists, retrying failed downloads, and more.
 
 ---
@@ -315,6 +320,12 @@ Install all:
 
 ```bash
 python3 -m pip install -r requirements.txt
+```
+
+or
+
+```bash
+./start.sh
 ```
 
 ---
