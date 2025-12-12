@@ -20,7 +20,23 @@ def get_youtube_info(url):
 
         # For playlist, yt-dlp outputs one JSON per line
         lines = result.stdout.strip().split("\n")
-        data = [json.loads(line) for line in lines if line.strip()]
+        # #region agent log
+        import json as json_module
+        import time
+        data = []
+        for idx, line in enumerate(lines):
+            if line.strip():
+                try:
+                    parsed = json_module.loads(line)
+                    data.append(parsed)
+                except json_module.JSONDecodeError as e:
+                    with open('/Users/saadaboussabr/Desktop/Archive/Temp/spotify-yt-dlp-downloader/.cursor/debug.log', 'a') as f:
+                        f.write(json_module.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"downloader/youtube_link_downloader.py:23","message":"JSONDecodeError parsing yt-dlp output - skipping line","data":{"line_index":idx,"line_preview":line[:100],"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
+                    # Skip invalid JSON lines instead of crashing
+                    continue
+        with open('/Users/saadaboussabr/Desktop/Archive/Temp/spotify-yt-dlp-downloader/.cursor/debug.log', 'a') as f:
+            f.write(json_module.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"downloader/youtube_link_downloader.py:23","message":"successfully parsed all lines","data":{"lines_count":len(lines),"parsed_count":len(data)},"timestamp":int(time.time()*1000)}) + '\n')
+        # #endregion
         return data
     except Exception as e:
         log_error(f"Error fetching info: {e}")
@@ -51,8 +67,11 @@ def download_from_link(url, output_dir, audio_format):
         "-x", "--audio-format", audio_format,
         "-o", os.path.join(output_dir, "%(title)s.%(ext)s")
     ]
-    subprocess.run(cmd)
-    log_success(f"Downloaded: {title}")
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
+        log_success(f"Downloaded: {title}")
+    else:
+        log_error(f"Failed to download: {title}")
 
 
 def download_from_playlist(url, output_dir, audio_format, sleep_between):
@@ -86,5 +105,8 @@ def download_from_playlist(url, output_dir, audio_format, sleep_between):
         "-x", "--audio-format", audio_format,
         "-o", os.path.join(output_dir, "%(title)s.%(ext)s")
     ]
-    subprocess.run(cmd)
-    log_success(f"Downloaded playlist: {playlist_title}")
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
+        log_success(f"Downloaded playlist: {playlist_title}")
+    else:
+        log_error(f"Failed to download playlist: {playlist_title}")

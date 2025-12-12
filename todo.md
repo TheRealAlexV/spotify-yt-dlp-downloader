@@ -29,12 +29,12 @@
 
 ### **Config & Automation**
 
-* ☐ Auto-update settings with validation
-* ☐ Profile-based config (light, advanced, minimal)
-* ☐ Auto-run scheduled syncs with Spotify export folder
-* ☐ Auto cleanup after each run
-* ☐ Configurable retry rules
-* ☐ Auto-create backups of JSON files
+* ☑ Auto-update settings with validation
+* ☑ Profile-based config (light, advanced, minimal)
+* ☑ Auto-run scheduled syncs with Spotify export folder
+* ☑ Auto cleanup after each run
+* ☑ Configurable retry rules
+* ☑ Auto-create backups of JSON files
 
 ---
 

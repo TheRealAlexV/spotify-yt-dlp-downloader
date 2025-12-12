@@ -46,13 +46,17 @@ def load_exportify_playlists(exportify_dir="data/exportify"):
         playlist_path = os.path.join(exportify_dir, file)
 
         tracks = []
-        with open(playlist_path, newline="", encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                artist = row.get("Artist Name(s)", "").strip()
-                track = row.get("Track Name", "").strip()
-                if artist and track:
-                    tracks.append({"artist": artist, "track": track})
+        try:
+            with open(playlist_path, newline="", encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    artist = row.get("Artist Name(s)", "").strip()
+                    track = row.get("Track Name", "").strip()
+                    if artist and track:
+                        tracks.append({"artist": artist, "track": track})
+        except Exception as e:
+            log_error(f"Error reading CSV file {playlist_path}: {e}")
+            continue
 
         if tracks:
             playlists.append({

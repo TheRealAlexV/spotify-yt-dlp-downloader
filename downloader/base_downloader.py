@@ -58,7 +58,17 @@ def _download_worker(artist, track, output_dir, audio_format):
 
 
 # Async batch downloader
-async def batch_download(tracks, output_dir, audio_format, max_workers=4):
+async def batch_download(tracks, output_dir, audio_format, max_workers=4, config=None):
+    """
+    Download multiple tracks concurrently.
+    
+    Args:
+        tracks: List of track dicts with 'artist' and 'track' keys
+        output_dir: Output directory for downloads
+        audio_format: Audio format (mp3, flac, etc.)
+        max_workers: Maximum concurrent downloads
+        config: Optional config dict for auto-cleanup and backup
+    """
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         tasks = []
@@ -70,3 +80,34 @@ async def batch_download(tracks, output_dir, audio_format, max_workers=4):
                 task.add_done_callback(lambda _: pbar.update(1))
                 tasks.append(task)
             await asyncio.gather(*tasks)
+    
+    # Post-download operations if config is provided
+    if config:
+        # Auto-backup data files
+        if config.get("auto_backup", True):
+            try:
+                from managers.backup_manager import backup_all
+                log_info("Creating backups of data files...")
+                backup_all(config)
+            except ImportError:
+                pass
+            except Exception as e:
+                log_error(f"Backup failed: {e}")
+        
+        # Auto-cleanup
+        if config.get("auto_cleanup", True):
+            try:
+                from managers.cleanup_manager import cleanup_after_download
+                log_info("Running post-download cleanup...")
+                cleanup_results = cleanup_after_download(config)
+                total_cleaned = (
+                    cleanup_results.get("temp_files_removed", 0) +
+                    cleanup_results.get("empty_dirs_removed", 0) +
+                    cleanup_results.get("partial_files_removed", 0)
+                )
+                if total_cleaned > 0:
+                    log_info(f"Cleaned up {total_cleaned} items")
+            except ImportError:
+                pass
+            except Exception as e:
+                log_error(f"Cleanup failed: {e}")

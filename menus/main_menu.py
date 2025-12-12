@@ -11,6 +11,7 @@ def main_menu():
             "Management Menu",
             "Automation Menu",
             "Tools Menu",
+            "Config Menu",
             "Exit"
         ]
     ).ask()

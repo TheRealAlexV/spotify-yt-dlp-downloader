@@ -1,0 +1,316 @@
+# Data & Export Folders Documentation
+
+This document describes the `data/` and `export/` folders, which handle data storage and export functionality.
+
+## Data Folder Overview
+
+The `data/` folder stores all input data files and download tracking information:
+
+- Track lists (from Spotify exports)
+- Playlist definitions
+- Download history and failed downloads
+- Exportify CSV files
+
+## Export Folder Overview
+
+The `export/` folder contains generated output files:
+
+- Library exports (JSON inventories)
+- Converted playlist tracklists
+
+---
+
+## Data Folder Files
+
+### `tracks.json`
+
+**Purpose**: Stores the main track list used for downloading music.
+
+**Format**:
+
+```json
+{
+  "tracks": [
+    {
+      "artist": "Artist Name",
+      "album": "Album Name",
+      "track": "Song Title",
+      "uri": "spotify:track:xxxx"
+    },
+    ...
+  ]
+}
+```
+
+**How it works**:
+
+- Loaded by `utils.loaders.load_tracks()`
+- Used by download menus to determine what to download
+- Can be generated from Spotify data export or manually created
+- Each track contains artist, album, track name, and Spotify URI
+
+**Usage**:
+
+- Primary input for "Download all pending" operations
+- Referenced in `config.json` as `tracks_file`
+
+---
+
+### `playlists.json`
+
+**Purpose**: Stores playlist definitions with track items.
+
+**Format**:
+
+```json
+{
+  "playlists": [
+    {
+      "name": "Playlist Name",
+      "lastModifiedDate": "2025-05-03",
+      "items": [
+        {
+          "track": {
+            "trackName": "Song Title",
+            "artistName": "Artist Name",
+            "albumName": "Album Name",
+            "trackUri": "spotify:track:xxxx"
+          },
+          "episode": null,
+          "audiobook": null,
+          "localTrack": null,
+          "addedDate": "2025-05-03"
+        },
+        ...
+      ]
+    },
+    ...
+  ]
+}
+```
+
+**How it works**:
+
+- Loaded by `utils.loaders.load_playlists()`
+- Used for playlist-based downloads
+- Structure matches Spotify export format
+- Each playlist contains name, modification date, and list of track items
+
+**Usage**:
+
+- Primary input for "Download from playlists file" operations
+- Referenced in `config.json` as `playlists_file`
+- Can be converted to tracklist format using `tools.playlist_to_tracklist`
+
+---
+
+### `download_history.json`
+
+**Purpose**: Tracks successfully downloaded tracks (if implemented).
+
+**Format**: (Structure may vary)
+
+```json
+[
+  {
+    "artist": "Artist Name",
+    "track": "Song Title",
+    "downloaded_at": "2025-01-15T10:30:00"
+  },
+  ...
+]
+```
+
+**How it works**:
+
+- Stores history of successful downloads
+- Can be used to prevent re-downloading
+- May be referenced by track checking utilities
+
+**Usage**: Used for tracking download history and preventing duplicates.
+
+---
+
+### `failed_downloads.json`
+
+**Purpose**: Stores tracks that failed to download for retry purposes.
+
+**Format**:
+
+```json
+[
+  {
+    "artist": "Artist Name",
+    "track": "Song Title"
+  },
+  ...
+]
+```
+
+**How it works**:
+
+- Populated when downloads fail
+- Used by `downloader.retry_manager.retry_failed()`
+- Updated after retry attempts (removes successful retries)
+- Can be manually edited or cleared
+
+**Usage**:
+
+- Referenced by retry functionality
+- Path defined in `constants.FAILED_FILE`
+
+---
+
+### `download_progress.json`
+
+**Purpose**: Stores progress state for batch downloads that can be resumed.
+
+**Format**:
+
+```json
+[
+  {
+    "artist": "Artist Name",
+    "track": "Song Title"
+  },
+  ...
+]
+```
+
+**How it works**:
+
+- Saved before starting batch downloads (if implemented)
+- Contains list of pending tracks
+- Used by `managers.resume_manager.resume_batch()`
+- Cleared after successful completion
+
+**Usage**:
+
+- Enables resuming interrupted batch downloads
+- Path defined in `constants.PROGRESS_FILE`
+
+---
+
+### `exportify/` Directory
+
+**Purpose**: Stores CSV files exported from Exportify for playlist downloads.
+
+**Format**: CSV files with columns:
+
+- `Artist Name(s)` - Artist name
+- `Track Name` - Track title
+- (Other columns may be present but not used)
+
+**How it works**:
+
+- CSV files placed in this directory are automatically detected
+- Parsed by `utils.loaders.load_exportify_playlists()`
+- Each CSV file becomes a playlist
+- Filename (without extension) becomes playlist name
+- Tracks extracted from CSV columns
+
+**Usage**:
+
+- Place Exportify CSV exports in this folder
+- Access via "Download from Exportify CSVs" menu option
+- Files are read-only (not modified by application)
+
+**Example**: `data/exportify/my_playlist.csv` becomes playlist "my_playlist"
+
+---
+
+## Export Folder Files
+
+### `potty_export_YYYY-MM-DD.json`
+
+**Purpose**: Exported inventory of all music files in the library.
+
+**Format**:
+
+```json
+{
+  "music_files": [
+    "Artist - Song.mp3",
+    "Another Artist - Another Song.mp3",
+    ...
+  ]
+}
+```
+
+**How it works**:
+
+- Generated by `tools.library_export_json.library_export_json()`
+- Date-stamped filename prevents overwriting previous exports
+- Contains only filenames (not full paths)
+- Includes all valid audio files found recursively
+
+**Usage**:
+
+- Created when user selects "Library export as JSON" from tools menu
+- Useful for backup, inventory, or migration purposes
+
+**Example**: `export/potty_export_2025-01-15.json`
+
+---
+
+### `playlist_tracklist.json`
+
+**Purpose**: Converted flat tracklist from playlist format.
+
+**Format**:
+
+```json
+{
+  "tracks": [
+    {
+      "artist": "Artist Name",
+      "album": "Album Name",
+      "track": "Song Title",
+      "uri": "spotify:track:xxxx"
+    },
+    ...
+  ]
+}
+```
+
+**How it works**:
+
+- Generated by `tools.playlist_to_tracklist.playlist_to_tracklist()`
+- Converts nested playlist structure to flat track list
+- Combines all playlists into single track list
+- Preserves all track metadata
+
+**Usage**:
+
+- Created when user selects "Playlist to track list" from tools menu
+- Useful for converting playlists to tracks.json format
+- Can be manually copied to `data/tracks.json` if needed
+
+---
+
+## Data Flow
+
+1. **Input**:
+
+   - Spotify exports → `data/tracks.json` or `data/playlists.json`
+   - Exportify CSVs → `data/exportify/*.csv`
+
+2. **Processing**:
+
+   - Tracks loaded → Download operations
+   - Failed downloads → `data/failed_downloads.json`
+   - Progress saved → `data/download_progress.json`
+
+3. **Output**:
+   - Downloads → `music/` directory (from config)
+   - Exports → `export/` directory
+
+---
+
+## Notes
+
+- All JSON files use UTF-8 encoding
+- Files are created automatically when needed
+- Export folder is created by export tools if missing
+- Data files can be manually edited if needed
+- CSV files in exportify folder are read-only
