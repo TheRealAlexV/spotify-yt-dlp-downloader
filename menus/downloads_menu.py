@@ -114,17 +114,18 @@ def downloads_menu(config):
 
         if sub_choice == "Pick which playlists to download":
             choices = [
-                questionary.Choice(title=f"{pl['name']} ({len(pl['tracks'])} tracks)", value=pl)
+                questionary.Choice(title=f"{pl['name']} ({len(pl['tracks'])} tracks)", value=pl['name'])
                 for pl in pending
             ]
-            selected = questionary.checkbox(
+            selected_names = questionary.checkbox(
                 "Select playlists to download (space to toggle, enter to confirm):",
                 choices=choices,
             ).ask()
-            if not selected:
+            if not selected_names:
                 log_info("No playlists selected.")
                 return
-            to_download = selected
+            # Map selected names back to playlist objects
+            to_download = [pl for pl in pending if pl['name'] in selected_names]
 
         for playlist in to_download:
             asyncio.run(
@@ -146,19 +147,47 @@ def downloads_menu(config):
             return
 
         choices = [
-            questionary.Choice(title=f"{pl['name']} ({len(pl['tracks'])} tracks)", value=pl)
+            questionary.Choice(title=f"{pl['name']} ({len(pl['tracks'])} tracks)", value=pl['name'])
             for pl in playlists
         ]
-        selected = questionary.checkbox(
+        selected_names = questionary.checkbox(
             "Select playlists to download (space to toggle, enter to confirm):",
             choices=choices,
         ).ask()
 
-        if not selected:
-            log_info("No playlists selected.")
-            return
+        if not selected_names:
+            log_warning("❌ No playlists selected.")
+            log_info("")
+            log_info("💡 How to use the checkbox interface:")
+            log_info("   • Use ↑↓ arrows to navigate between playlists")
+            log_info("   • Press SPACE to select/deselect a playlist")
+            log_info("   • Selected items will be marked with ✓")
+            log_info("   • Press ENTER when finished to confirm your selection")
+            log_info("")
+            
+            retry = questionary.select(
+                "What would you like to do?",
+                choices=[
+                    "Try selecting playlists again",
+                    "Back to Downloads menu"
+                ]
+            ).ask()
+            
+            if retry == "Try selecting playlists again":
+                # Retry the selection process
+                selected_names = questionary.checkbox(
+                    "Select playlists to download (space to toggle, enter to confirm):",
+                    choices=choices,
+                ).ask()
+                
+                if not selected_names:
+                    log_info("No playlists selected. Returning to Downloads menu.")
+                    return
+            else:
+                return
 
-        for playlist in selected:
+        for name in selected_names:
+            playlist = next(pl for pl in playlists if pl['name'] == name)
             # Check which tracks are already downloaded
             _, pending_tracks = check_downloaded_files(config["output_dir"], playlist["tracks"])
             already_downloaded_count = len(playlist["tracks"]) - len(pending_tracks)
