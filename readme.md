@@ -39,7 +39,13 @@ Features interactive menus, system checks, download management, metadata embeddi
 
 ## 🛠 Prerequisite for Spotify Export downloads: **Export Your Spotify Data**
 
-Before using Potty for spotify downloads, you need to request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
+> **NOTE:** You have two options for getting Spotify data into the application:
+> 1. **Official Spotify Data Export** (detailed below)
+> 2. **Exportify** (recommended alternative - no waiting for email)
+
+### Option 1: Official Spotify Data Export
+
+Before using Potty for spotify downloads, you can request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
 
 This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which Potty can use to generate the track list and manage downloads.
 
@@ -54,6 +60,24 @@ How to get your Spotify data:
     Extract the ZIP and locate YourLibrary.json.
 
     Use or convert this JSON file as the basis for your data/tracks.json to run Potty.
+
+### Option 2: Exportify (Recommended Alternative)
+
+Exportify is a simpler, faster way to get your Spotify playlists without waiting for Spotify's email response.
+
+How to use Exportify:
+
+    1. Go to https://exportify.net/
+
+    2. Click "Login with Spotify" and authorize the application
+
+    3. Select the playlist you want to export from the list
+
+    4. Click "Export" next to your chosen playlist
+
+    5. Save the CSV file to the data/exportify/ folder in your project
+
+Exportify downloads are immediately available and don't require the waiting period associated with official Spotify data exports.
 
 This step is essential to generate the input data Potty needs for downloading your favorite music.
 
