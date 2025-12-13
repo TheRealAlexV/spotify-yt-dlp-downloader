@@ -25,6 +25,15 @@ DEFAULT_CONFIG = {
     "sync_write_tracks_json": True,
     "auto_sync_enabled": False,
     "auto_sync_interval": 3600,
+
+    # Enhanced metadata options
+    "enable_metadata_embedding": True,
+    "metadata_template": "basic",
+    "auto_metadata_embedding": True,
+    "enable_musicbrainz_lookup": True,
+    "musicbrainz_rate_limit": True,
+    "musicbrainz_retries": 3,
+    "musicbrainz_backoff_base": 0.75,
 }
 
 # Profile definitions
@@ -36,6 +45,14 @@ CONFIG_PROFILES = {
         "auto_backup": True,
         "max_backups": 5,
         "sleep_between": 3,
+        # Metadata settings for light profile
+        "enable_metadata_embedding": True,
+        "metadata_template": "basic",
+        "auto_metadata_embedding": True,
+        "enable_musicbrainz_lookup": False,
+        "musicbrainz_rate_limit": True,
+        "musicbrainz_retries": 1,
+        "musicbrainz_backoff_base": 0.5,
     },
     "advanced": {
         "retry_attempts": 5,
@@ -44,6 +61,14 @@ CONFIG_PROFILES = {
         "auto_backup": True,
         "max_backups": 20,
         "sleep_between": 5,
+        # Metadata settings for advanced profile
+        "enable_metadata_embedding": True,
+        "metadata_template": "comprehensive",
+        "auto_metadata_embedding": True,
+        "enable_musicbrainz_lookup": True,
+        "musicbrainz_rate_limit": True,
+        "musicbrainz_retries": 5,
+        "musicbrainz_backoff_base": 1.0,
     },
     "minimal": {
         "retry_attempts": 0,
@@ -52,6 +77,14 @@ CONFIG_PROFILES = {
         "auto_backup": False,
         "max_backups": 0,
         "sleep_between": 2,
+        # Metadata settings for minimal profile
+        "enable_metadata_embedding": False,
+        "metadata_template": "basic",
+        "auto_metadata_embedding": False,
+        "enable_musicbrainz_lookup": False,
+        "musicbrainz_rate_limit": False,
+        "musicbrainz_retries": 0,
+        "musicbrainz_backoff_base": 0.5,
     },
 }
 
@@ -79,6 +112,15 @@ CONFIG_SCHEMA = {
     "sync_write_tracks_json": {"type": bool, "required": False},
     "auto_sync_enabled": {"type": bool, "required": False},
     "auto_sync_interval": {"type": int, "required": False, "min": 60, "max": 86400},
+
+    # Enhanced metadata validation
+    "enable_metadata_embedding": {"type": bool, "required": False},
+    "metadata_template": {"type": str, "required": False, "choices": ["basic", "comprehensive", "dj-mix"]},
+    "auto_metadata_embedding": {"type": bool, "required": False},
+    "enable_musicbrainz_lookup": {"type": bool, "required": False},
+    "musicbrainz_rate_limit": {"type": bool, "required": False},
+    "musicbrainz_retries": {"type": int, "required": False, "min": 0, "max": 10},
+    "musicbrainz_backoff_base": {"type": (int, float), "required": False, "min": 0.1, "max": 5.0},
 }
 
 
