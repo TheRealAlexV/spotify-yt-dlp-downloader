@@ -406,3 +406,7 @@ or
 
 This tool is for **personal use only**.  
 Ensure you respect copyright laws and YouTube's terms.
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
