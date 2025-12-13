@@ -9,10 +9,6 @@ DEFAULT_CONFIG = {
     "tracks_file": "data/tracks.json",
     "playlists_file": "data/playlists.json",
 
-    # CSV-first inputs (Exportify format)
-    "primary_input_source": "csv",  # "csv" (preferred) or "json" (legacy)
-    "primary_csv_file": "../_WORKING/Electro.csv",
-
     "output_dir": "music",
     "audio_format": "mp3",
     "sleep_between": 5,
