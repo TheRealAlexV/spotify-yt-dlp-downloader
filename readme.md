@@ -202,6 +202,71 @@ No manual setup required! The script will guide you through the process with cle
 
 ---
 
+## 🐳 Docker Deployment
+
+If you'd rather not install Python/ffmpeg locally, you can run Potty fully inside Docker. The provided Docker setup includes system dependencies like **ffmpeg** and runs the same interactive `questionary` menus.
+
+### Prerequisites
+
+- Docker
+- Docker Compose (recommended)
+
+### Option A: Docker Compose (recommended)
+
+From the `spotify-yt-dlp-downloader/` folder:
+
+```bash
+docker compose build
+docker compose run --rm spotify-yt-dlp-downloader
+```
+
+> If you have an older Docker setup, `docker-compose` may be the correct command.
+
+### Option B: Docker only
+
+```bash
+docker build -t spotify-yt-dlp-downloader .
+
+docker run --rm -it \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/music:/app/music" \
+  -v "$(pwd)/export:/app/export" \
+  -v "$(pwd)/config.json:/app/config.json" \
+  -e TERM=xterm-256color \
+  spotify-yt-dlp-downloader
+```
+
+### Persistent data (volume mounts)
+
+The examples above mount local folders/files into the container so your library survives container restarts:
+
+- `./data` → `/app/data` (tracks/playlists/history/failed + `data/exportify/*.csv`)
+- `./music` → `/app/music` (downloaded audio)
+- `./export` → `/app/export` (JSON exports, etc.)
+- `./config.json` → `/app/config.json` (your settings)
+
+### Common commands
+
+```bash
+# Rebuild after code/dependency changes
+docker compose build --no-cache
+
+# Run again (interactive menu)
+docker compose run --rm spotify-yt-dlp-downloader
+
+# Open a shell inside the container (for debugging)
+docker compose run --rm --entrypoint /bin/sh spotify-yt-dlp-downloader
+```
+
+### Notes (interactive mode)
+
+- This is an interactive CLI app, so you need a TTY:
+  - Compose already sets `stdin_open: true` and `tty: true`
+  - With plain Docker, always use `-it`
+- If the checkbox menus don’t respond, try a real terminal (not a basic IDE console) and ensure `TERM` is set (see examples above).
+
+---
+
 ## ⚙️ Upgrade guide
 
 If the system fails to donwload your music too frequently, make sure to run this command
