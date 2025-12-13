@@ -5,3 +5,5 @@ app.log
 dist
 *.tmp
 .venv
+data/exportify/*
+!data/exportify/exportify_test_playlist.csv
