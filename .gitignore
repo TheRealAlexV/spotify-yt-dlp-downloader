@@ -8,5 +8,4 @@ dist
 data/exportify/*
 !data/exportify/exportify_test_playlist.csv
 config.json
-spotify-yt-dlp-downloader/config.json
-spotify-yt-dlp-downloader/config.json
+data/spotify_tokens.json
