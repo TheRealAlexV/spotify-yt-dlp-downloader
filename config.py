@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     # Spotify Web API (OAuth PKCE)
     # NOTE: These are optional unless/ until a Spotify API workflow is enabled.
     "spotify_client_id": "",
-    "spotify_redirect_uri": "http://localhost:8888/callback",
+    "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
     "spotify_scopes": [
         "playlist-read-private",
         "playlist-read-collaborative",

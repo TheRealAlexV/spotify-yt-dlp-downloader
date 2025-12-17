@@ -104,7 +104,13 @@ def _spotify_authenticate(config: dict) -> None:
         log_info("=" * 72)
         log_info("1) A browser login will open (or you can copy/paste the URL).")
         log_info("2) After approving, Spotify will redirect you to your redirect_uri.")
-        log_info("3) Copy the FULL redirect URL from the browser and paste it back here.")
+        log_info(
+            "   Your browser will likely show a connection refused / can't reach this page error — this is NORMAL because TRAV-DJ doesn't run a local callback server."
+        )
+        log_info("   (You may see ERR_CONNECTION_REFUSED on the redirect_uri page.)")
+        log_info(
+            "3) Copy the FULL redirect URL from the browser address bar (it will contain `code=`) and paste it back here."
+        )
         log_info("")
         log_info(f"Authorize URL:\n{auth_url}")
         log_info("=" * 72)

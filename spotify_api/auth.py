@@ -1,18 +1,23 @@
+import base64
+import hashlib
+import json
 import logging
 import secrets
-import base64
 import urllib.parse
-import httpx
-import pkg_resources # New: used to determine current package version
-from typing import Optional, Dict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from cryptography.hazmat.primitives import hashes
+from typing import Any, Dict, Iterable, Optional
 
-from ..constants import APP_NAME
-from ..config import get_spotify_config
+import httpx
 
-logger = logging.getLogger(APP_NAME)
+from .token_manager import TokenInfo, TokenManager
+
+logger = logging.getLogger(__name__)
+
+SPOTIFY_ACCOUNTS_BASE_URL = "https://accounts.spotify.com"
+
+# Exportify's public Client ID (convenient fallback, but could change upstream).
+# Source: exportify/exportify.js
+EXPORTIFY_FALLBACK_CLIENT_ID = "d99b082b01d74d61a100c9a0e056380b"
 
 
 def _base64url_no_pad(raw: bytes) -> str:
@@ -20,48 +25,30 @@ def _base64url_no_pad(raw: bytes) -> str:
 
 
 def code_challenge_from_verifier(verifier: str) -> str:
-    """Compute the PKCE S256 code_challenge from a code_verifier.
-
-    Mirrors Exportify's implementation:
-      base64url(sha256(verifier)) without padding.
-    """
+    """Compute PKCE S256 code_challenge from code_verifier."""
 
     digest = hashlib.sha256((verifier or "").encode("utf-8")).digest()
     return _base64url_no_pad(digest)
 
 
 def get_effective_spotify_client_id(config: dict) -> str:
-    """
-    Returns the Spotify Client ID to use.
-    Users *must* provide their own client ID; there is no longer a public fallback.
-    """
-    client_id = config.get("spotify_client_id")
-    if not client_id:
-        logger.error("Spotify Client ID is not configured. Please set 'spotify_client_id' in config.json. Visit https://developer.spotify.com/dashboard/applications to get one.")
-        raise ValueError("Spotify Client ID not configured.")
-    return str(client_id).strip()
+    """Return the Spotify Client ID to use (config value or Exportify fallback)."""
+
+    config = config or {}
+    client_id = str(config.get("spotify_client_id", "")).strip()
+    return client_id or EXPORTIFY_FALLBACK_CLIENT_ID
 
 
 def check_spotify_credentials(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Check whether Spotify OAuth settings are present and provide user guidance.
-
-    Returns a dict:
-      {
-        "ok": bool,
-        "client_id": str,
-        "client_id_source": "config"|"exportify_fallback",
-        "redirect_uri": str,
-        "scopes": list[str],
-        "message": str,
-      }
-    """
+    """Validate Spotify OAuth config fields and return a structured status dict."""
 
     config = config or {}
     redirect_uri = str(config.get("spotify_redirect_uri", "")).strip()
     scopes = list(config.get("spotify_scopes", []) or [])
 
+    client_id_raw = str(config.get("spotify_client_id", "")).strip()
     client_id = get_effective_spotify_client_id(config)
-    client_id_source = "config" if str(config.get("spotify_client_id", "")).strip() else "exportify_fallback"
+    client_id_source = "config" if client_id_raw else "exportify_fallback"
 
     if not redirect_uri:
         return {
@@ -76,7 +63,6 @@ def check_spotify_credentials(config: Dict[str, Any]) -> Dict[str, Any]:
             ),
         }
 
-    # We can technically proceed with the Exportify fallback, but we want to warn loudly.
     if client_id_source == "exportify_fallback":
         return {
             "ok": True,
@@ -101,37 +87,21 @@ def check_spotify_credentials(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def spotify_app_setup_instructions(config: dict) -> str:
-    """
-    Provides instructions for setting up a Spotify app, with a dynamic redirect URI.
-    """
-    redirect_uri = config.get("spotify_redirect_uri", "http://localhost:8888/callback") # Safe fallback in case config loading fails
-    scopes = config.get("spotify_scopes", [
-        "user-library-read", # Access to a user's "Your Music" library
-        "playlist-read-private", # Read access to a user's private playlists
-        "playlist-read-collaborative" # Read access to a user's collaborative playlists
-    ])
+def spotify_app_setup_instructions(*, redirect_uri: str = "http://localhost:8888/callback") -> str:
+    """Return user-facing setup instructions for creating a Spotify Developer app."""
 
-    # Dynamic package version for user-agent - fallback if not installed via pip
-    try:
-        package_version = pkg_resources.get_distribution(APP_NAME).version
-    except pkg_resources.DistributionNotFound:
-        package_version = "unknown"
-
-    instructions = f"""
-Spotify app setup (recommended):\n"
+    redirect_uri = str(redirect_uri or "").strip() or "http://localhost:8888/callback"
+    return (
+        "Spotify app setup (recommended):\n"
         "1) Go to https://developer.spotify.com/dashboard\n"
-        "2) Create an app (or select an existing one)\n"
+        "2) Create an app (or select an existing app)\n"
         f"3) Add this Redirect URI in the app settings: {redirect_uri}\n"
         "4) Copy the Client ID into spotify-yt-dlp-downloader/config.json as spotify_client_id\n"
-        "5) Keep spotify_scopes as-is unless you know you need different permissions\n"
-        "\n"
+        "5) Keep spotify_scopes as-is unless you know you need different permissions\n\n"
         "Notes:\n"
         "- This project uses Authorization Code + PKCE (no client secret required).\n"
         "- Redirect URI must match *exactly* what you configure in the Spotify dashboard.\n"
-    """
-
-    return instructions
+    )
 
 
 def extract_code_from_redirect_url(redirect_url: str) -> Dict[str, str]:
@@ -156,16 +126,7 @@ class PKCEPair:
 
 
 class SpotifyPKCEAuth:
-    """Spotify OAuth (Authorization Code + PKCE).
-
-    This module intentionally avoids external deps (requests).
-
-    Typical flow:
-      1) pkce = SpotifyPKCEAuth.generate_pkce_pair()
-      2) url = auth.get_authorize_url(pkce.code_challenge, state=...)
-      3) user completes login; you receive `code` at redirect URI
-      4) token = auth.exchange_code_for_token(code=..., code_verifier=pkce.code_verifier)
-    """
+    """Spotify OAuth (Authorization Code + PKCE) helper."""
 
     def __init__(self, config: Dict[str, Any], *, token_manager: Optional[TokenManager] = None):
         self.config = config or {}
@@ -174,8 +135,8 @@ class SpotifyPKCEAuth:
     @staticmethod
     def generate_pkce_pair() -> PKCEPair:
         """Generate a PKCE verifier + challenge."""
+
         # RFC 7636: verifier length 43-128 chars, characters from ALPHA / DIGIT / "-" / "." / "_" / "~"
-        # token_urlsafe uses base64url alphabet, which is compatible (we strip padding)
         verifier = secrets.token_urlsafe(64).rstrip("=")
         verifier = verifier[:128]
         if len(verifier) < 43:
@@ -192,29 +153,26 @@ class SpotifyPKCEAuth:
         scopes: Optional[Iterable[str]] = None,
         show_dialog: bool = False,
     ) -> str:
-        # Prefer user-provided client id; fall back to Exportify's client id.
         client_id = get_effective_spotify_client_id(self.config)
         redirect_uri = str(self.config.get("spotify_redirect_uri", "")).strip()
-        if not client_id:
-            raise ValueError("Missing config.spotify_client_id")
         if not redirect_uri:
             raise ValueError("Missing config.spotify_redirect_uri")
 
         scope_list = list(scopes if scopes is not None else self.config.get("spotify_scopes", []))
         scope_str = " ".join([str(s).strip() for s in scope_list if str(s).strip()])
 
-        params = {
+        params: Dict[str, str] = {
             "client_id": client_id,
             "response_type": "code",
             "redirect_uri": redirect_uri,
             "code_challenge_method": "S256",
-            "code_challenge": code_challenge,
+            "code_challenge": str(code_challenge),
             "show_dialog": "true" if show_dialog else "false",
         }
         if scope_str:
             params["scope"] = scope_str
         if state:
-            params["state"] = state
+            params["state"] = str(state)
 
         return f"{SPOTIFY_ACCOUNTS_BASE_URL}/authorize?{urllib.parse.urlencode(params)}"
 
@@ -247,6 +205,7 @@ class SpotifyPKCEAuth:
         )
 
         token = TokenInfo.from_spotify_token_response(payload)
+
         # Spotify may omit refresh_token on refresh; keep existing.
         if not token.refresh_token:
             token = TokenInfo(
@@ -275,21 +234,27 @@ class SpotifyPKCEAuth:
         return {"auth_url": url, "pkce_pair": pkce, "state": state}
 
     def _post_form(self, url: str, form: Dict[str, Any]) -> Dict[str, Any]:
-        encoded = urllib.parse.urlencode({k: str(v) for k, v in form.items() if v is not None}).encode("utf-8")
-        req = urllib.request.Request(
-            url=url,
-            data=encoded,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            method="POST",
-        )
+        data = {k: str(v) for k, v in (form or {}).items() if v is not None}
 
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                body = resp.read().decode("utf-8")
+            with httpx.Client(timeout=30.0, follow_redirects=False) as client:
+                resp = client.post(
+                    url,
+                    data=data,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
         except Exception as e:
             raise RuntimeError(f"Spotify token request failed: {e}") from e
 
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Spotify token request failed (HTTP {resp.status_code}): {resp.text}")
+
         try:
-            return json.loads(body)
-        except Exception as e:
-            raise RuntimeError(f"Spotify token response was not JSON: {body}") from e
+            payload = resp.json()
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"Spotify token response was not JSON: {resp.text}") from e
+
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"Spotify token response was not an object: {payload}")
+
+        return payload

@@ -19,7 +19,7 @@
   "auto_sync_interval": 3600,
 
   "spotify_client_id": "",
-  "spotify_redirect_uri": "http://localhost:8888/callback",
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
   "spotify_scopes": [
     "playlist-read-private",
     "playlist-read-collaborative",
